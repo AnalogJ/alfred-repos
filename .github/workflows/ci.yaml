@@ -1,0 +1,21 @@
+name: CI
+# This workflow is triggered on pushes & pull requests
+on: [push]
+
+jobs:
+  build:
+    name: Build
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build
+        run: make build
+      - name: Archive
+        uses: actions/upload-artifact@v2
+        with:
+          name: workflow.zip
+          path: |
+            alfred-git-repos-3.1.2.alfredworkflow
+
+
