@@ -11,6 +11,9 @@ jobs:
         uses: actions/checkout@v2
       - name: Build
         run: |
+          python --version
+          pip --version
+
           pip install -U pip~=20.0
           make build
       - name: Archive
