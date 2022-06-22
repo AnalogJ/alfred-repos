@@ -77,7 +77,6 @@ install: $(WF_OUTPUT)
 
 clean:
 	rm -rf \
-		requirements.txt \
 		./build/ \
 		.mypy_cache/ \
 		./bin/.site-packages/ \
