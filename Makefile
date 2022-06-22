@@ -1,5 +1,6 @@
-# must use system python
-PYTHON := /usr/bin/python3
+# If `venv/bin/python` exists, it is used. If not, use PATH to find python.
+SYSTEM_PYTHON  = $(or $(shell which python3), $(shell which python))
+PYTHON         = $(or $(wildcard venv/bin/python), $(SYSTEM_PYTHON))
 
 # get the version number
 WF_VERSION := $(shell $(PYTHON) src/__version__.py)
@@ -16,59 +17,45 @@ WF_DESCRIPTION := ""
 # resulting workflow to build/install
 WF_OUTPUT := ${WF_NAME}-${WF_VERSION}.alfredworkflow
 
-
 # src/build dirs
 SRC_DIR := src
 BUILD_DIR := build
 
-.PHONY: build
-.PHONY: src-build
+all: clean build
 
-all: clean install
+.PHONY: all
 
-# install src/.site-packages
-src: requirements.txt
-src: PACKAGES=-r requirements.txt
-src: src-build
+## Environment
 
-# install bin/.site-packages
-bin: PACKAGES=pip-tools==5.5.0
-bin: bin/.site-packages
+venv:
+	rm -rf venv
+	$(SYSTEM_PYTHON) -m venv venv
 
-pip-compile: bin
 
-# compile the requirements dir
-requirements.txt: pip-compile requirements.in
-	PYTHONPATH=./bin/.site-packages:${PYTHONPATH} \
-		./bin/.site-packages/bin/pip-compile \
-		requirements.in
-
-%/.site-packages:
-	# must use the system python
+deps:
 	$(PYTHON) -m pip install \
-		--prefer-binary \
-		--upgrade \
-		--target=$@ \
-		${PACKAGES}
+	--prefer-binary \
+	--upgrade \
+	-r requirements.txt
 
-src-build:
-	# must use the system python
-	$(PYTHON) -m pip install \
-		--upgrade \
-		--target="$(BUILD_DIR)" \
-		${PACKAGES}
+.PHONY: deps
+.PHONY: venv
+
+## Build, install
+
+build:
 	rm -rf ./build/*.egg-info ./build/*.dist-info
-
-build: $(WF_OUTPUT)
-
-${WF_NAME}%.alfredworkflow: src
+	# must use the system python
+	$(PYTHON) -m pip install \
+		--upgrade \
+		--target=./build \
+		-r requirements.txt
 	rsync --archive --verbose \
 		--filter '- *.pyc' \
 		--filter '- *.egg-info' \
 		--filter '- *.dist-info' \
 		--filter '- __pycache__' \
 		"$(SRC_DIR)/" "$(BUILD_DIR)/"
-
 	./bin/workflow-build \
 		--force --verbose \
 		--name="${WF_NAME}" \
@@ -79,12 +66,14 @@ ${WF_NAME}%.alfredworkflow: src
 		--webaddress="${WF_WEBADDRESS}" \
 		--readme="${WF_README}" \
 		--description="${WF_DESCRIPTION}" \
-		"$(BUILD_DIR)" 
-
+		"$(BUILD_DIR)"
 	echo "done"
 
 install: $(WF_OUTPUT)
 	open $(WF_OUTPUT)
+
+.PHONY: build
+.PHONY: install
 
 clean:
 	rm -rf \
@@ -94,6 +83,4 @@ clean:
 		./bin/.site-packages/ \
 		*.alfredworkflow
 
-EXECUTABLES = $(PYTHON) plutil open rsync ./bin/workflow-build
-K := $(foreach exec,$(EXECUTABLES),\
-        $(if $(shell which $(exec)),some string,$(error "No $(exec) in PATH")))
+.PHONY: clean
