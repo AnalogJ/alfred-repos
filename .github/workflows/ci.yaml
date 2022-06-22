@@ -15,6 +15,7 @@ jobs:
           pip3 --version
 
           pip3 install -U pip~=20.0
+          make venv
           make build
       - name: Archive
         uses: actions/upload-artifact@v2
